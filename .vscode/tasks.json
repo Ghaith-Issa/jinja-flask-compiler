@@ -1,0 +1,130 @@
+{
+  "version": "2.0.0",
+  "options": {
+    "cwd": "${workspaceFolder}",
+    "env": {
+      "JDK": "C:/Users/amres/.jdks/jdk-25"
+    },
+    "shell": {
+      "executable": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command"
+      ]
+    }
+  },
+  "tasks": [
+    {
+      "label": "compile",
+      "type": "shell",
+      "command": "$f = (Get-ChildItem -Recurse -Filter *.java src).FullName; & $env:JDK/bin/javac.exe -encoding UTF-8 -cp dependencies/antlr-4.13.2-complete.jar -d bin @f",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "verify (full check)",
+      "type": "shell",
+      "command": "powershell -ExecutionPolicy Bypass -File verify.ps1",
+      "problemMatcher": []
+    },
+    {
+      "label": "run",
+      "type": "process",
+      "dependsOn": "compile",
+      "command": "C:/Users/amres/.jdks/jdk-25/bin/java.exe",
+      "args": [
+        "-Dfile.encoding=UTF-8",
+        "-cp",
+        "bin;dependencies/antlr-4.13.2-complete.jar",
+        "Main"
+      ],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "run semantic errors demo",
+      "type": "process",
+      "dependsOn": "compile",
+      "command": "C:/Users/amres/.jdks/jdk-25/bin/java.exe",
+      "args": [
+        "-Dfile.encoding=UTF-8",
+        "-cp",
+        "bin;dependencies/antlr-4.13.2-complete.jar",
+        "Main",
+        "Testing Project/SemanticErrorsDemo"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "serve (live compiler server)",
+      "type": "process",
+      "dependsOn": "compile",
+      "command": "C:/Users/amres/.jdks/jdk-25/bin/java.exe",
+      "args": [
+        "-Dfile.encoding=UTF-8",
+        "-cp",
+        "bin;dependencies/antlr-4.13.2-complete.jar",
+        "Main",
+        "--serve",
+        "--port",
+        "8080"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "watch",
+      "type": "process",
+      "dependsOn": "compile",
+      "command": "C:/Users/amres/.jdks/jdk-25/bin/java.exe",
+      "args": [
+        "-Dfile.encoding=UTF-8",
+        "-cp",
+        "bin;dependencies/antlr-4.13.2-complete.jar",
+        "Main",
+        "--watch"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "analyse only (--ast-only)",
+      "type": "process",
+      "dependsOn": "compile",
+      "command": "C:/Users/amres/.jdks/jdk-25/bin/java.exe",
+      "args": [
+        "-Dfile.encoding=UTF-8",
+        "-cp",
+        "bin;dependencies/antlr-4.13.2-complete.jar",
+        "Main",
+        "--ast-only"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "run Jinja2 test only",
+      "type": "process",
+      "dependsOn": "compile",
+      "command": "C:/Users/amres/.jdks/jdk-25/bin/java.exe",
+      "args": [
+        "-Dfile.encoding=UTF-8",
+        "-cp",
+        "bin;dependencies/antlr-4.13.2-complete.jar",
+        "ASTJinja2withHTMLandCSS.Test"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "regenerate ANTLR parsers",
+      "type": "shell",
+      "command": "& $env:JDK/bin/java.exe -jar dependencies/antlr-4.13.2-complete.jar -visitor -o src/antlr/grammar/flask -package antlr.grammar.flask src/antlr/grammar/flask/FlaskExprLexer.g4 src/antlr/grammar/flask/FlaskExprParser.g4; & $env:JDK/bin/java.exe -jar dependencies/antlr-4.13.2-complete.jar -visitor -o src/antlr/grammar/Jinja2withHTMLandCSS/gen -package antlr.grammar.Jinja2withHTMLandCSS.gen -lib src/antlr/grammar/Jinja2withHTMLandCSS src/antlr/grammar/Jinja2withHTMLandCSS/Jinja2withHTMLandCSSLexer.g4 src/antlr/grammar/Jinja2withHTMLandCSS/Jinja2withHTMLandCSSParser.g4",
+      "problemMatcher": []
+    }
+  ]
+}

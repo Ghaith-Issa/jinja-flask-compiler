@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "Run Compiler (Main)",
+      "request": "launch",
+      "mainClass": "Main",
+      "projectName": "jinja-flask-compiler",
+      "cwd": "${workspaceFolder}",
+      "console": "internalConsole",
+      "vmArgs": "-Dfile.encoding=UTF-8",
+      "encoding": "UTF-8"
+    },
+    {
+      "type": "java",
+      "name": "Run Jinja2 Test only",
+      "request": "launch",
+      "mainClass": "ASTJinja2withHTMLandCSS.Test",
+      "projectName": "jinja-flask-compiler",
+      "cwd": "${workspaceFolder}",
+      "vmArgs": "-Dfile.encoding=UTF-8",
+      "encoding": "UTF-8"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Broken</title>
+</head>
+<body>
+
+<h1>{{ title }}</h1>
+
+<div class="products">
+    {% for p in products %}
+    <p>{{ p.name }}</p>
+    <img src="/images/{{ p.image }}" alt="product">
+    {% endfor %}
+</div>
+
+<p>{{ customer.name }}</p>
+
+<img src="/logo/{{ brand }}" alt="logo">
+
+</body>
+</html>

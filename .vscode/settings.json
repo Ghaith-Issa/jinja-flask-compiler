@@ -1,0 +1,18 @@
+{
+  "java.jdt.ls.java.home": "C:/Users/amres/.jdks/jdk-25",
+  "java.configuration.runtimes": [
+    {
+      "name": "JavaSE-25",
+      "path": "C:/Users/amres/.jdks/jdk-25",
+      "default": true
+    }
+  ],
+  "java.project.sourcePaths": ["src"],
+  "java.project.outputPath": "bin",
+  "java.project.referencedLibraries": ["dependencies/*.jar"],
+  "files.encoding": "utf8",
+  "files.exclude": {
+    "out": true,
+    "bin": true
+  }
+}

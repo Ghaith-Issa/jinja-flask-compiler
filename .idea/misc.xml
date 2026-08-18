@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ANTLRGenerationPreferences">
+    <option name="perGrammarGenerationSettings">
+      <list>
+        <PerGrammarGenerationSettings>
+          <option name="fileName" value="$PROJECT_DIR$/src/antlr/grammer/flask/FlaskExpr.g4" />
+          <option name="autoGen" value="true" />
+          <option name="outputDir" value="C:\Projects\CompilerProject\src\antlr\grammer\flask" />
+          <option name="libDir" value="" />
+          <option name="encoding" value="" />
+          <option name="pkg" value="" />
+          <option name="language" value="" />
+          <option name="generateVisitor" value="true" />
+        </PerGrammarGenerationSettings>
+        <PerGrammarGenerationSettings>
+          <option name="fileName" value="$PROJECT_DIR$/src/antlr/grammar/flask/FlaskExpr.g4" />
+          <option name="autoGen" value="true" />
+          <option name="outputDir" value="C:\Projects\CompilerProject\src\antlr\grammar\flask" />
+          <option name="libDir" value="" />
+          <option name="encoding" value="" />
+          <option name="pkg" value="" />
+          <option name="language" value="" />
+          <option name="generateVisitor" value="true" />
+        </PerGrammarGenerationSettings>
+        <PerGrammarGenerationSettings>
+          <option name="fileName" value="$PROJECT_DIR$/src/antlr/grammar/flask/FlaskExprLexer.g4" />
+          <option name="autoGen" value="true" />
+          <option name="outputDir" value="C:\Projects\CompilerProject\src\" />
+          <option name="libDir" value="" />
+          <option name="encoding" value="" />
+          <option name="pkg" value="" />
+          <option name="language" value="" />
+          <option name="generateVisitor" value="true" />
+        </PerGrammarGenerationSettings>
+        <PerGrammarGenerationSettings>
+          <option name="fileName" value="$PROJECT_DIR$/src/antlr/grammar/flask/FlaskExprParser.g4" />
+          <option name="autoGen" value="true" />
+          <option name="outputDir" value="C:\Projects\CompilerProject\src\" />
+          <option name="libDir" value="" />
+          <option name="encoding" value="" />
+          <option name="pkg" value="" />
+          <option name="language" value="" />
+          <option name="generateVisitor" value="true" />
+        </PerGrammarGenerationSettings>
+        <PerGrammarGenerationSettings>
+          <option name="fileName" value="$PROJECT_DIR$/src/antlr/grammar/Jinja2withHTMLandCSS/Jinja2withHTMLandCSSParser.g4" />
+          <option name="autoGen" value="true" />
+          <option name="outputDir" value="/src" />
+          <option name="libDir" value="" />
+          <option name="encoding" value="" />
+          <option name="pkg" value="antlr.grammar.Jinja2withHTMLandCSS.gen" />
+          <option name="language" value="" />
+          <option name="generateVisitor" value="true" />
+        </PerGrammarGenerationSettings>
+        <PerGrammarGenerationSettings>
+          <option name="fileName" value="$PROJECT_DIR$/src/antlr/grammar/Jinja2withHTMLandCSS/Jinja2withHTMLandCSSLexer.g4" />
+          <option name="autoGen" value="true" />
+          <option name="outputDir" value="C:\Users\amres\OneDrive\Documents\GitHub\jinja-flask-compiler\src" />
+          <option name="libDir" value="C:\Users\amres\OneDrive\Documents\GitHub\jinja-flask-compiler\src" />
+          <option name="encoding" value="" />
+          <option name="pkg" value="antlr.grammar.Jinja2withHTMLandCSS.gen" />
+          <option name="language" value="" />
+          <option name="generateVisitor" value="true" />
+        </PerGrammarGenerationSettings>
+      </list>
+    </option>
+  </component>
+  <component name="ProjectRootManager" version="2" languageLevel="JDK_20" default="true" project-jdk-name="openjdk-25" project-jdk-type="JavaSDK">
+    <output url="file://$PROJECT_DIR$/out" />
+  </component>
+</project>
