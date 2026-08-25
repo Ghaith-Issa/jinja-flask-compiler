@@ -14,6 +14,11 @@
     <h1>{{ product.name }}</h1>
     <p class="price">$ {{ product.price }}</p>
     <p class="desc">{{ product.description }}</p>
+    <form action="/delete" method="POST" class="delete-form" style="margin-top: 20px;">
+        <input type="hidden" name="id" value="{{ product.id }}">
+        <button type="submit" class="delete-btn">Delete Product</button>
+    </form>
 </div>
 </body>
 </html>
+

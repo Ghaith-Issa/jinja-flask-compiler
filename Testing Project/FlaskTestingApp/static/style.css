@@ -91,8 +91,33 @@ body {
     text-align: center;
 }
 
+.card-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.delete-form {
+    margin-top: 8px;
+}
+
+.delete-btn {
+    padding: 6px 14px;
+    background: #d9534f;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.delete-btn:hover {
+    background: #c9302c;
+}
+
 .detail-image {
     width: 100%;
     border-radius: 12px;
     margin-bottom: 20px;
 }
+

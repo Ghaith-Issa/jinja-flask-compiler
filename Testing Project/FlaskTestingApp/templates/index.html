@@ -13,13 +13,20 @@
 
 <div class="products">
     {% for p in products %}
-    <a href="/product/{{ p.id }}" class="card">
-        <img src="/images/{{ p.image }}" class="product-image">
-        <h2>{{ p.name }}</h2>
-        <p class="price">$ {{ p.price }}</p>
-    </a>
+    <div class="card-wrapper">
+        <a href="/product/{{ p.id }}" class="card">
+            <img src="/images/{{ p.image }}" class="product-image">
+            <h2>{{ p.name }}</h2>
+            <p class="price">$ {{ p.price }}</p>
+        </a>
+        <form action="/delete" method="POST" class="delete-form">
+            <input type="hidden" name="id" value="{{ p.id }}">
+            <button type="submit" class="delete-btn">Delete</button>
+        </form>
+    </div>
     {% endfor %}
 </div>
 
 </body>
 </html>
+

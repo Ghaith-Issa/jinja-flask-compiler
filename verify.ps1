@@ -122,14 +122,28 @@ try {
         -ContentType "application/x-www-form-urlencoded" `
         -MaximumRedirection 0 -UseBasicParsing -ErrorAction SilentlyContinue | Out-Null
 
-    $after = Get-Content "output/index.html" -Raw          # read the FILE, not the response
-    $countAfter = ([regex]::Matches($after, '<h2>')).Count
-    $serverOk = ($countAfter -eq $countBefore + 1) -and ($after -match 'VerifyItem')
-    $detail = "$countBefore -> $countAfter products on disk"
+    $afterAdd = Get-Content "output/index.html" -Raw          # read the FILE, not the response
+    $countAfterAdd = ([regex]::Matches($afterAdd, '<h2>')).Count
+
+    # Test deleting product ID 1
+    Invoke-WebRequest "http://localhost:$port/delete" -Method POST `
+        -Body "id=1" `
+        -ContentType "application/x-www-form-urlencoded" `
+        -MaximumRedirection 0 -UseBasicParsing -ErrorAction SilentlyContinue | Out-Null
+
+    $afterDelete = Get-Content "output/index.html" -Raw
+    $countAfterDelete = ([regex]::Matches($afterDelete, '<h2>')).Count
+
+    $matchLaptop = ($afterDelete -match '<h2>Laptop</h2>')
+    $serverOk = ($countAfterAdd -eq $countBefore + 1) -and ($countAfterDelete -eq $countAfterAdd - 1) -and (-not $matchLaptop)
+    $detail = "Add: $countBefore->$countAfterAdd, Delete: $countAfterAdd->$countAfterDelete products on disk"
 } catch {
     $detail = $_.Exception.Message
 }
-Check "Live server regenerates on form POST" $serverOk $detail
+Check "Live server regenerates on POST (Add & Delete)" $serverOk $detail
+
+
+
 
 Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 500

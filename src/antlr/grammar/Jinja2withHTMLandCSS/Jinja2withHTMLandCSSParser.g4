@@ -71,7 +71,10 @@ attributeName
     | STEP_ATT
     | REQUIRED_ATT
     | STYLE_ATT
+    | ACTION_ATT
+    | VALUE_ATT
     ;
+
 
 attributeValue : STRING;
 
@@ -107,8 +110,10 @@ anyId
     | TITLE_TAG | META_TAG | LINK_TAG | IMG_TAG | INPUT_TAG | TEXTAREA_TAG
     | NAME_ATT | TYPE_ATT | CLASS_ATT | HREF_ATT | SRC_ATT | REL_ATT
     | STYLE_ATT | CHARSET_ATT | ALT_ATT | METHOD_ATT | STEP_ATT | REQUIRED_ATT
+    | ACTION_ATT | VALUE_ATT
     | FOR | IN | BOOL
     ;
+
 // ================= CSS =================
 
 cssProg

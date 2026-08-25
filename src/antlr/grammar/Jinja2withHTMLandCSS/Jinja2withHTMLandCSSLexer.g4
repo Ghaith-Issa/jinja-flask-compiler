@@ -42,6 +42,9 @@ TYPE_ATT        : 'type';
 NAME_ATT        : 'name';
 STEP_ATT        : 'step';
 REQUIRED_ATT    : 'required';
+ACTION_ATT      : 'action';
+VALUE_ATT       : 'value';
+
 
 
 FONT_FAMILY    : 'font-family';

@@ -76,6 +76,19 @@ def add_product():
 
     return render_template("add_product.html")
 
+# Delete product (POST)
+@app.route("/delete", methods=["POST"])
+def delete_product():
+    if request.method == "POST":
+        target_id = int(request.form["id"])
+        new_products = []
+        for p in products:
+            if p["id"] != target_id:
+                new_products.append(p)
+        products = new_products
+        return redirect(url_for("home"))
+    return redirect(url_for("home"))
+
 # Optional: run server
 # if __name__ == "__main__":
 #     app.run(debug=True, port=5001)
