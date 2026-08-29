@@ -17,8 +17,9 @@ public final class Builtins {
             "Flask", "render_template", "redirect", "url_for", "send_from_directory",
             "jsonify", "abort", "flash",
             // methods reached through attribute access
-            "route", "append", "get", "keys", "values", "items"
+            "route", "append", "remove", "pop", "get", "keys", "values", "items"
     );
+
 
     /** Objects and values Flask makes available globally. */
     public static final Set<String> GLOBALS = Set.of(

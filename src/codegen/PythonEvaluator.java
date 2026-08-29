@@ -122,9 +122,10 @@ public class PythonEvaluator {
     private void execute(Statement statement, Environment env) {
         if (statement == null) return;
 
-        if (statement instanceof ImportStatement) {
-            return;                                   // names come from the builtin table
+        if (statement instanceof ImportStatement || statement instanceof GlobalStatement) {
+            return;                                   // names come from builtins / globals
         }
+
         if (statement instanceof FunctionDef function) {
             env.define(function.getName(), new FunctionValue(function));
             return;
@@ -405,10 +406,18 @@ public class PythonEvaluator {
                     ((List<Object>) list).add(args.isEmpty() ? null : args.get(0));
                     return null;
                 }
+                case "remove" -> {
+                    if (!args.isEmpty() && args.get(0) != null) {
+                        Object target = args.get(0);
+                        ((List<Object>) list).removeIf(item -> Values.equal(item, target));
+                    }
+                    return null;
+                }
                 case "pop" -> {
                     if (list.isEmpty()) throw new EvaluationException("pop from empty list", line);
                     return ((List<Object>) list).remove(list.size() - 1);
                 }
+
                 default -> { }
             }
         }

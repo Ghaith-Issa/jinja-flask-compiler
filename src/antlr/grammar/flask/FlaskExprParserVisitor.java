@@ -1,4 +1,4 @@
-// Generated from C:/Projects/CompilerProject/src/antlr/grammar/flask/FlaskExprParser.g4 by ANTLR 4.13.2
+// Generated from src/antlr/grammar/flask/FlaskExprParser.g4 by ANTLR 4.13.2
 package antlr.grammar.flask;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
@@ -23,6 +23,13 @@ public interface FlaskExprParserVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitImport(FlaskExprParser.ImportContext ctx);
+	/**
+	 * Visit a parse tree produced by the {@code GlobalStmt}
+	 * labeled alternative in {@link FlaskExprParser#statement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitGlobalStmt(FlaskExprParser.GlobalStmtContext ctx);
 	/**
 	 * Visit a parse tree produced by the {@code Assign}
 	 * labeled alternative in {@link FlaskExprParser#statement}.
@@ -79,6 +86,12 @@ public interface FlaskExprParserVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitForstatementment(FlaskExprParser.ForstatementmentContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link FlaskExprParser#globalstatement}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitGlobalstatement(FlaskExprParser.GlobalstatementContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link FlaskExprParser#decorator}.
 	 * @param ctx the parse tree

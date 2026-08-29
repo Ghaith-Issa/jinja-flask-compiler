@@ -24,3 +24,4 @@ hs_err_pid*
 replay_pid*
 /compiler_output
 /output
+/Testing Project/FlaskTestingApp/__pycache__

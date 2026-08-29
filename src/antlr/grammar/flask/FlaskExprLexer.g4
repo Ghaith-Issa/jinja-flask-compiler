@@ -108,7 +108,9 @@ FOR     : 'for' ;
 IN      : 'in' ;
 FROM    : 'from' ;
 IMPORT  : 'import' ;
+GLOBAL  : 'global' ;
 RETURN  : 'return' ;
+
 TRUE    : 'True' ;
 FALSE   : 'False' ;
 NONE    : 'None' ;

@@ -7,6 +7,7 @@ program : statement* EOF ;
 // Statements can be decorated or plain
 statement
     : importstatement          # Import
+    | globalstatement          # GlobalStmt
     | assignment          # Assign
     | returnStmt          # Return
     | expr                # ExprStmt
@@ -16,6 +17,9 @@ statement
     | ifstatement               # Ifstatementment
     | forstatement                         # Forstatementment
     ;
+
+globalstatement : GLOBAL NAME (COMMA NAME)* ;
+
 
 // Decorator: @expr
 decorator

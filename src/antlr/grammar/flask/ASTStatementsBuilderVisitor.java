@@ -64,6 +64,18 @@ public class ASTStatementsBuilderVisitor extends FlaskExprParserBaseVisitor<Stat
     }
 
     @Override
+    public Statement visitGlobalStmt(FlaskExprParser.GlobalStmtContext ctx) {
+        List<String> names = new ArrayList<>();
+        if (ctx.globalstatement() != null && ctx.globalstatement().NAME() != null) {
+            for (var nameToken : ctx.globalstatement().NAME()) {
+                names.add(nameToken.getText());
+            }
+        }
+        return stamp(new GlobalStatement(ctx.getStart().getLine(), names));
+    }
+
+
+    @Override
     public Statement visitAssignment(FlaskExprParser.AssignmentContext ctx) {
         Expression left = expr(ctx.expr(0));
         Expression right = expr(ctx.expr(1));

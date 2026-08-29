@@ -79,6 +79,7 @@ def add_product():
 # Delete product (POST)
 @app.route("/delete", methods=["POST"])
 def delete_product():
+    global products
     if request.method == "POST":
         target_id = int(request.form["id"])
         new_products = []
@@ -88,6 +89,7 @@ def delete_product():
         products = new_products
         return redirect(url_for("home"))
     return redirect(url_for("home"))
+
 
 # Optional: run server
 # if __name__ == "__main__":

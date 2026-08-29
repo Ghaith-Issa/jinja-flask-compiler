@@ -30,8 +30,11 @@ public class TypeSystem {
             Map.entry("redirect", Types.STRING),
             Map.entry("send_from_directory", Types.STRING),
             Map.entry("Flask", Types.OBJECT),
-            Map.entry("append", Types.NONE)
+            Map.entry("append", Types.NONE),
+            Map.entry("remove", Types.NONE),
+            Map.entry("pop", Types.UNKNOWN)
     );
+
 
     /** Attributes of Flask's request object that carry a known type. */
     private static final Map<String, String> REQUEST_ATTRIBUTES = Map.of(
