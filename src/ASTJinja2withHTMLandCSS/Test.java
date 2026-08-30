@@ -21,6 +21,6 @@ public class Test {
         sent.put("product", "like 1");
         SymbolsTable.getHtmlInstance().addHtmlSymbol("data_sent", sent);
 
-        Jinja2Runner.runDefaultSuite(false);
+        Jinja2Runner.runDefaultSuite(true);
     }
 }

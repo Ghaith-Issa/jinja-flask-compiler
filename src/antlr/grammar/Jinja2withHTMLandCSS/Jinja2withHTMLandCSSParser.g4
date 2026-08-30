@@ -1,182 +1,223 @@
 parser grammar Jinja2withHTMLandCSSParser;
+options { tokenVocab = Jinja2withHTMLandCSSLexer; }
 
-options { tokenVocab=Jinja2withHTMLandCSSLexer; }
-
+// =================== Entry Points ===================
 prog
-    : jinja2Prog #jinja2
-    | cssProg    #css
- ;
+    : htmlProg      #htmlEntry
+    | cssProg       #cssEntry
+    ;
 
-jinja2Prog
-    : doctype? elementContent* EOF
+// =================== HTML Document ===================
+htmlProg
+    : doctype? content* EOF
     ;
 
 doctype
-    : OPEN_TAG NOT DOCTYPE_TAG HTML_TAG CLOSE_TAG
+    : OPEN_TAG TAG_BANG tagName tagName CLOSE_TAG
     ;
 
-htmlelement
-    : startTag elementContent* endTag                          #openCloseTag
-    | OPEN_TAG voidTagName attribute* (SELF_CLOSD | CLOSE_TAG) #selfClosingTag
+content
+    : htmlElement
+    | jinjaExpression
+    | jinjaBlock
+    | jinjaSetStmt
+    | textNode
     ;
 
-startTag
-    : OPEN_TAG tagName attribute* CLOSE_TAG
-    ;
-
-endTag
-    : OPEN_TAG_SLASH tagName CLOSE_TAG
+// =================== HTML Elements ===================
+htmlElement
+    : OPEN_TAG VOID_TAG_NAME attribute* (SLASH_CLOSE | CLOSE_TAG)                          #voidElement
+    | OPEN_TAG tagName attribute* SLASH_CLOSE                                              #selfClosingTag
+    | OPEN_TAG tagName attribute* CLOSE_TAG content* OPEN_TAG_SLASH tagName CLOSE_TAG      #openCloseTag
     ;
 
 tagName
-    : HTML_TAG
-    | HEAD_TAG
-    | BODY_TAG
-    | TITLE_TAG
-    | DIV_TAG
-    | A_TAG
-    | P_TAG
-    | H1_TAG | H2_TAG | H3_TAG | H4_TAG | H5_TAG | H6_TAG
-    | FORM_TAG
-    | LABEL_TAG
-    | BUTTON_TAG
-    | TEXTAREA_TAG
-    | SPAN_TAG
-    | UL_TAG
-    | LI_TAG
-    ;
-
-voidTagName
-    : META_TAG
-    | LINK_TAG
-    | IMG_TAG
-    | INPUT_TAG
+    : TAG_NAME
+    | VOID_TAG_NAME
     ;
 
 attribute
-    : attributeName ASSIGN attributeValue #fullAttr
-    | attributeName                       #booleanAttr
+    : tagName TAG_EQUALS attrValue     #fullAttribute
+    | tagName                          #booleanAttribute
     ;
 
-attributeName
-    : CHARSET_ATT
-    | ALT_ATT
-    | HREF_ATT
-    | SRC_ATT
-    | REL_ATT
-    | CLASS_ATT
-    | METHOD_ATT
-    | TYPE_ATT
-    | NAME_ATT
-    | STEP_ATT
-    | REQUIRED_ATT
-    | STYLE_ATT
-    | ACTION_ATT
-    | VALUE_ATT
+attrValue
+    : TAG_DQ_OPEN attrValuePart* DQ_CLOSE     #dqAttrValue
+    | TAG_SQ_OPEN sqAttrValuePart* SQ_CLOSE   #sqAttrValue
+    | tagName                                 #unquotedAttrValue
     ;
 
-
-attributeValue : STRING;
-
-elementContent
-    : statement    #textContent
-    | htmlelement  #nestedElement
-    | expression   #jinjaExpression
-    | block        #jinjaBlock
-    | BLOCK_START IDDEFINER (IDDEFINER | ASSIGN | STRING | NUMBER)* BLOCK_END #jinjaStatement
+attrValuePart
+    : ATTR_TEXT                          #attrLiteral
+    | ATTR_LBRACE                        #attrLBrace
+    | jinjaExpression                   #attrJinjaExpr
     ;
 
-statement : (anyId| COLON | LPAREN | RPAREN | DOT | COMMA | PLUS | MINUS | STAR | DIVISION)+ ;
-
-expression
-    : LCURLY LCURLY memberAccess RCURLY RCURLY
+sqAttrValuePart
+    : SQ_ATTR_TEXT                      #sqAttrLiteral
+    | SQ_ATTR_LBRACE                    #sqAttrLBrace
+    | jinjaExpression                   #sqAttrJinjaExpr
     ;
 
-memberAccess
-    : anyId (DOT anyId)*
+// =================== Jinja Expressions {{ ... }} ===================
+jinjaExpression
+    : JINJA_EXPR_OPEN jinjaExpr JINJA_EXPR_CLOSE
+    | ATTR_JINJA_EXPR_OPEN jinjaExpr JINJA_EXPR_CLOSE
+    | SQ_JINJA_EXPR_OPEN jinjaExpr JINJA_EXPR_CLOSE
     ;
 
-// The collection is a memberAccess, not a bare name: iterating a nested field
-// ({% for item in group.items %}) is ordinary Jinja and failed to parse before.
-block
-    : BLOCK_START FOR anyId IN memberAccess BLOCK_END
-      elementContent*
-      BLOCK_START END_FOR BLOCK_END
-    ;
-anyId
-    : IDDEFINER
-    | HTML_TAG | HEAD_TAG | BODY_TAG | DIV_TAG | A_TAG | P_TAG
-    | SPAN_TAG | FORM_TAG | LABEL_TAG | BUTTON_TAG | UL_TAG | LI_TAG
-    | TITLE_TAG | META_TAG | LINK_TAG | IMG_TAG | INPUT_TAG | TEXTAREA_TAG
-    | NAME_ATT | TYPE_ATT | CLASS_ATT | HREF_ATT | SRC_ATT | REL_ATT
-    | STYLE_ATT | CHARSET_ATT | ALT_ATT | METHOD_ATT | STEP_ATT | REQUIRED_ATT
-    | ACTION_ATT | VALUE_ATT
-    | FOR | IN | BOOL
+jinjaExpr
+    : jinjaExpr JINJA_PIPE JINJA_ID (JINJA_LPAREN jinjaArgList? JINJA_RPAREN)?   #filterExpr
+    | jinjaExpr JINJA_DOT JINJA_ID                                                #memberExpr
+    | jinjaExpr JINJA_LBRACKET jinjaExpr JINJA_RBRACKET                           #subscriptExpr
+    | jinjaExpr (JINJA_STAR|JINJA_SLASH|JINJA_PERCENT) jinjaExpr                 #multExpr
+    | jinjaExpr (JINJA_PLUS|JINJA_MINUS) jinjaExpr                               #addExpr
+    | jinjaExpr (JINJA_EQ|JINJA_NE|JINJA_LT|JINJA_GT|JINJA_LE|JINJA_GE) jinjaExpr #compareExpr
+    | jinjaExpr JINJA_IS JINJA_ID                                                 #testExpr
+    | jinjaExpr JINJA_IN jinjaExpr                                                #inExpr
+    | JINJA_NOT jinjaExpr                                                         #notExpr
+    | jinjaExpr JINJA_AND jinjaExpr                                               #andExpr
+    | jinjaExpr JINJA_OR jinjaExpr                                                #orExpr
+    | JINJA_ID JINJA_LPAREN jinjaArgList? JINJA_RPAREN                            #callExpr
+    | JINJA_LPAREN jinjaExpr JINJA_RPAREN                                         #parenExpr
+    | JINJA_ID                                                                     #nameExpr
+    | JINJA_STRING                                                                 #stringLiteral
+    | JINJA_NUMBER                                                                 #numberLiteral
+    | (JINJA_TRUE | JINJA_FALSE)                                                   #boolLiteral
+    | JINJA_NONE                                                                   #noneLiteral
     ;
 
-// ================= CSS =================
+jinjaArgList
+    : jinjaArg (JINJA_COMMA jinjaArg)*
+    ;
 
+jinjaArg
+    : (JINJA_ID JINJA_ASSIGN)? jinjaExpr
+    ;
+
+// =================== Jinja Block Constructs ===================
+jinjaBlock
+    : forBlock
+    | ifBlock
+    | namedBlock
+    ;
+
+forBlock
+    : jinjaForOpen content* jinjaForClose
+    ;
+
+jinjaForOpen
+    : JINJA_STMT_OPEN KW_FOR STMT_ID KW_IN stmtExpr JINJA_STMT_CLOSE
+    ;
+
+jinjaForClose
+    : JINJA_STMT_OPEN KW_ENDFOR JINJA_STMT_CLOSE
+    ;
+
+ifBlock
+    : jinjaIfOpen content* (jinjaElse content*)? jinjaEndIf
+    ;
+
+jinjaIfOpen
+    : JINJA_STMT_OPEN KW_IF stmtExpr JINJA_STMT_CLOSE
+    ;
+
+jinjaElse
+    : JINJA_STMT_OPEN KW_ELSE JINJA_STMT_CLOSE
+    ;
+
+jinjaEndIf
+    : JINJA_STMT_OPEN KW_ENDIF JINJA_STMT_CLOSE
+    ;
+
+namedBlock
+    : jinjaBlockOpen content* jinjaBlockClose
+    ;
+
+jinjaBlockOpen
+    : JINJA_STMT_OPEN KW_BLOCK STMT_ID JINJA_STMT_CLOSE
+    ;
+
+jinjaBlockClose
+    : JINJA_STMT_OPEN KW_ENDBLOCK JINJA_STMT_CLOSE
+    ;
+
+jinjaSetStmt
+    : JINJA_STMT_OPEN KW_SET STMT_ID STMT_ASSIGN stmtExpr JINJA_STMT_CLOSE
+    ;
+
+stmtExpr
+    : stmtExpr STMT_PIPE STMT_ID (STMT_LPAREN stmtArgList? STMT_RPAREN)?        #stmtFilterExpr
+    | stmtExpr STMT_DOT STMT_ID                                                   #stmtMemberExpr
+    | stmtExpr STMT_LBRACKET stmtExpr STMT_RBRACKET                                #stmtSubscriptExpr
+    | stmtExpr (STMT_STAR|STMT_SLASH|STMT_PERCENT) stmtExpr                       #stmtMultExpr
+    | stmtExpr (STMT_PLUS|STMT_MINUS) stmtExpr                                    #stmtAddExpr
+    | stmtExpr (STMT_EQ|STMT_NE|STMT_LT|STMT_GT|STMT_LE|STMT_GE) stmtExpr       #stmtCompareExpr
+    | stmtExpr KW_IS STMT_ID                                                      #stmtTestExpr
+    | stmtExpr KW_IN stmtExpr                                                     #stmtInExpr
+    | KW_NOT stmtExpr                                                             #stmtNotExpr
+    | stmtExpr KW_AND stmtExpr                                                    #stmtAndExpr
+    | stmtExpr KW_OR stmtExpr                                                     #stmtOrExpr
+    | STMT_ID STMT_LPAREN stmtArgList? STMT_RPAREN                                 #stmtCallExpr
+    | STMT_LPAREN stmtExpr STMT_RPAREN                                             #stmtParenExpr
+    | STMT_ID                                                                      #stmtNameExpr
+    | STMT_STRING                                                                  #stmtStringLiteral
+    | STMT_NUMBER                                                                  #stmtNumberLiteral
+    | (STMT_TRUE | STMT_FALSE)                                                     #stmtBoolLiteral
+    | STMT_NONE                                                                    #stmtNoneLiteral
+    ;
+
+stmtArgList
+    : stmtArg (STMT_COMMA stmtArg)*
+    ;
+
+stmtArg
+    : (STMT_ID STMT_ASSIGN)? stmtExpr
+    ;
+
+textNode
+    : (TEXT | LBRACE)+
+    ;
+
+// =================== CSS (external .css file) ===================
 cssProg
-    : cssRule+ EOF
+    : cssRule* EOF
     ;
 
 cssRule
-    : cssSelectorList LCURLY cssDeclaration* RCURLY
+    : cssSelectorList CSS_LCURLY cssDeclaration* CSS_RCURLY
     ;
 
 cssSelectorList
-    : cssSelector (COMMA cssSelector)*
+    : cssSelector (CSS_COMMA cssSelector)*
     ;
 
 cssSelector
-    : simpleSelector (simpleSelector)* (COLON pseudoClass)?
+    : cssSimpleSelector ((CSS_GT | CSS_PLUS | CSS_TILDE)? cssSimpleSelector)* (CSS_COLON CSS_COLON? CSS_IDENT)?
     ;
 
-cssElementName
-    : tagName
-    | voidTagName
-    ;
-
-className
-    : IDDEFINER
-    | cssElementName
-    ;
-
-simpleSelector
-    : className           #ElementSelector
-    | IDDEFINER           #CustomElementSelector
-    | DOT className       #ClassSelector
-    | HASH IDDEFINER      #IdSelector
-    ;
-
-pseudoClass
-    : PSEUDO_HOVER
+cssSimpleSelector
+    : CSS_IDENT                 #cssElementSelector
+    | CSS_DOT CSS_IDENT         #cssClassSelector
+    | CSS_HASH CSS_IDENT        #cssIdSelector
+    | CSS_STAR                  #cssUniversalSelector
     ;
 
 cssDeclaration
-    : cssProperty COLON cssValue SEMICOLON
+    : CSS_IDENT CSS_COLON cssValueList CSS_IMPORTANT? CSS_SEMICOLON?
     ;
 
-cssProperty
-    : FONT_FAMILY | BACKGROUND | BACKGROUND_COLOR | COLOR_PROP
-    | PADDING | PADDING_TOP | PADDING_BOTTOM | MARGIN
-    | MARGIN_TOP | MARGIN_BOTTOM | WIDTH | HEIGHT | DISPLAY
-    | GAP | FLEX_WRAP | JUSTIFY_CONTENT | TEXT_ALIGN | FONT_SIZE
-    | FONT_WEIGHT | BORDER | BORDER_RADIUS | BOX_SHADOW
-    | TEXT_DECORATION | CURSOR | TRANSFORM | FLEX_DIRECTION
+cssValueList
+    : cssValue+
     ;
 
 cssValue
-    : cssValueAtom+
-    ;
-
-cssValueAtom
-    : NUMBER        #cssNumber
-    | CSS_UNIT      #cssUnit
-    | CSS_COLOR     #cssColor
-    | IDDEFINER     #cssIdentifier
-    | COMMA         #cssComma
-    | LPAREN        #cssLParen
-    | RPAREN        #cssRParen
-    | MINUS         #cssMinus
+    : CSS_NUMBER CSS_IDENT?                                 #cssNumberWithUnit
+    | CSS_NUMBER CSS_PERCENT                                #cssPercentage
+    | CSS_HEX_COLOR                                         #cssColor
+    | CSS_IDENT                                             #cssIdent
+    | CSS_STRING                                            #cssString
+    | CSS_IDENT CSS_LPAREN cssValueList CSS_RPAREN          #cssFunctionCall
+    | CSS_COMMA                                             #cssComma
+    | CSS_SLASH                                             #cssSlash
     ;

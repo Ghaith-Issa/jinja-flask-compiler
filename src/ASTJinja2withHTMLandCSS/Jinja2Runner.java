@@ -13,7 +13,6 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class Jinja2Runner {
 
     /** A parsed template together with whatever went wrong while parsing it. */
@@ -24,11 +23,6 @@ public class Jinja2Runner {
     public static void runDefaultSuite(Boolean detail) {
         try {
             SymbolsTable symbolsTable = SymbolsTable.getHtmlInstance();
-//            Map<String, Object> inner = new LinkedHashMap<>();
-//            inner.addHtmlSymbol("products", "all the product");
-//            inner.addHtmlSymbol("product", "like 1");
-//            symbolsTable.addHtmlSymbol("data_sent", inner);
-
 
             String[] files = {
                     "Testing Project/FlaskTestingApp/templates/add_product.html",
@@ -41,9 +35,8 @@ public class Jinja2Runner {
 
             for (String file : files) {
                 System.out.println("\n--- Processing: " + file + " ---");
-                allErrors.addAll(executeFileParser(file,detail));
+                allErrors.addAll(executeFileParser(file, detail));
             }
-
 
             if (!allErrors.isEmpty()) {
                 System.err.println("\n=== SEMANTIC ERRORS ===");
@@ -58,9 +51,12 @@ public class Jinja2Runner {
         }
     }
 
-    private static List<String> executeFileParser(String filePath,Boolean detail) throws Exception {
+    private static List<String> executeFileParser(String filePath, Boolean detail) throws Exception {
         CharStream cs = readSource(filePath);
         Jinja2withHTMLandCSSLexer lexer = new Jinja2withHTMLandCSSLexer(cs);
+        if (filePath.toLowerCase().endsWith(".css")) {
+            lexer.pushMode(Jinja2withHTMLandCSSLexer.CSS);
+        }
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         Jinja2withHTMLandCSSParser parser = new Jinja2withHTMLandCSSParser(tokens);
 
@@ -71,13 +67,13 @@ public class Jinja2Runner {
         ParseTree tree = parser.prog();
 
         if (collector.hasErrors()) {
-            collector.getErrors().forEach(e -> System.err.println(e));
+            collector.getErrors().forEach(System.err::println);
         } else {
             BaseVisitor builder = new BaseVisitor();
             ASTNode root = builder.visit(tree);
             attachSource(root, filePath, cs);
 
-            root.print("",true,0,detail);
+            root.print("", true, 0, detail);
             if (!builder.semanticErrors.isEmpty()) {
                 builder.semanticErrors.add(0, "ERRORS for the file: " + filePath);
             }
@@ -85,14 +81,16 @@ public class Jinja2Runner {
         }
         return new ArrayList<>();
     }
+
     /**
      * Parses one template and hands back its errors alongside the tree.
-     * Returning them beats a "last errors" static: the caller cannot forget to read
-     * it, and two parses can never overwrite one another's results.
      */
     public static TemplateParse parseTemplate(String filePath) throws Exception {
         CharStream cs = readSource(filePath);
         Jinja2withHTMLandCSSLexer lexer = new Jinja2withHTMLandCSSLexer(cs);
+        if (filePath.toLowerCase().endsWith(".css")) {
+            lexer.pushMode(Jinja2withHTMLandCSSLexer.CSS);
+        }
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         Jinja2withHTMLandCSSParser parser = new Jinja2withHTMLandCSSParser(tokens);
 
@@ -118,7 +116,7 @@ public class Jinja2Runner {
     }
 
     private static String fileNameOf(String path) {
-        int slash = Math.max(path.lastIndexOf('/'), path.lastIndexOf(92));
+        int slash = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
         return (slash >= 0) ? path.substring(slash + 1) : path;
     }
 
@@ -134,6 +132,4 @@ public class Jinja2Runner {
             program.setSource(filePath, cs.getText(Interval.of(0, cs.size() - 1)));
         }
     }
-
-
 }

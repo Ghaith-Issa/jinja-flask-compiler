@@ -15,12 +15,23 @@ public class SelectorChainNode extends CSSSelectorNode {
     }
 
     public void addPart(CSSSelectorNode s) {
-        parts.add(s);
+        if (s != null) {
+            parts.add(s);
+        }
+    }
+
+    public List<CSSSelectorNode> getParts() {
+        return parts;
     }
 
     public void setPseudo(PseudoClassNode p) {
         this.pseudo = p;
     }
+
+    public PseudoClassNode getPseudo() {
+        return pseudo;
+    }
+
     @Override
     public List<ASTNode> getChildren() {
         List<ASTNode> children = new ArrayList<>(parts);
@@ -29,6 +40,7 @@ public class SelectorChainNode extends CSSSelectorNode {
         }
         return children;
     }
+
     @Override
     public void print(String indent) {
         System.out.println(header(indent));

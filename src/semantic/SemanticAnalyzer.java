@@ -1,10 +1,6 @@
 package semantic;
 
-import ASTJinja2withHTMLandCSS.Jinja2.AttributeNode;
-import ASTJinja2withHTMLandCSS.Jinja2.BlockNode;
-import ASTJinja2withHTMLandCSS.Jinja2.ExpressionNode;
-import ASTJinja2withHTMLandCSS.Jinja2.JinjaStatementNode;
-import ASTJinja2withHTMLandCSS.Jinja2.MemberAccessNode;
+import ASTJinja2withHTMLandCSS.Jinja2.*;
 import FlaskStatement.*;
 import SymbolsTable.Builtins;
 import SymbolsTable.Scope;
@@ -41,7 +37,7 @@ public class SemanticAnalyzer {
     /** Calls miniFlask allows. Anything else is a TYPE_ERROR. */
     private static final Set<String> ALLOWED_CALLS = Builtins.FUNCTIONS;
 
-    /** A {{ ... }} interpolation inside an HTML attribute value. */
+    /** A {{ ... }} interpolation fallback inside raw strings. */
     private static final Pattern INTERPOLATION = Pattern.compile("\\{\\{(.+?)}}");
 
     /** The leading identifier chain of a Jinja expression, e.g. p.image -> p */
@@ -178,7 +174,7 @@ public class SemanticAnalyzer {
             int actual = node.args.size();
             if (actual != expected) {
                 report(ErrorType.TYPE_ERROR, node.line,
-                        "'" + name + "' takes " + expected + " argument(s) but got " + actual);
+                    "'" + name + "' takes " + expected + " argument(s) but got " + actual);
             }
         }
     }
@@ -265,19 +261,43 @@ public class SemanticAnalyzer {
                                Set<String> localVars) {
         if (node == null) return;
 
-        if (node instanceof BlockNode block) {
-            // {% for p in products %} — the collection comes from the context,
-            // the iterator is local to the block body.
-            visitBlockNode(block, provided, localVars);
+        if (node instanceof ForBlockNode block) {
+            visitForBlockNode(block, provided, localVars);
             return;
         }
 
-        if (node instanceof ExpressionNode expression) {
-            checkTemplateExpression(expression, provided, localVars);
-        } else if (node instanceof JinjaStatementNode statement) {
-            checkTemplateStatement(statement, provided, localVars);
-        } else if (node instanceof AttributeNode attribute) {
-            checkAttributeInterpolation(attribute, provided, localVars);
+        if (node instanceof IfBlockNode ifBlock) {
+            checkJinjaExpr(ifBlock.getCondition(), ifBlock.getLineNumber(), provided, localVars,
+                    "tested by {% if " + (ifBlock.getCondition() != null ? ifBlock.getCondition().asString() : "") + " %}");
+            for (ASTJinja2withHTMLandCSS.ASTNode child : ifBlock.getThenBody()) {
+                visitTemplate(child, provided, localVars);
+            }
+            for (ASTJinja2withHTMLandCSS.ASTNode child : ifBlock.getElseBody()) {
+                visitTemplate(child, provided, localVars);
+            }
+            return;
+        }
+
+        if (node instanceof SetNode setNode) {
+            localVars.add(setNode.getVarName());
+            checkJinjaExpr(setNode.getValue(), setNode.getLineNumber(), provided, localVars,
+                    "assigned in {% set " + setNode.getVarName() + " = ... %}");
+            return;
+        }
+
+        if (node instanceof JinjaExpressionNode expression) {
+            checkJinjaExpr(expression.getExpr(), expression.getLineNumber(), provided, localVars,
+                    "used as {{ " + (expression.getExpr() != null ? expression.getExpr().asString() : "") + " }}");
+            return;
+        }
+
+        if (node instanceof ElementNode elem) {
+            if (elem.getTagName().equalsIgnoreCase("img") && !elem.hasAttribute("src")) {
+                report(ErrorType.TYPE_ERROR, elem.getLineNumber(), "Missing 'src' for <img> tag.");
+            }
+            if (elem.getTagName().equalsIgnoreCase("a") && !elem.hasAttribute("href")) {
+                report(ErrorType.TYPE_ERROR, elem.getLineNumber(), "Missing 'href' for <a> tag.");
+            }
         }
 
         for (ASTJinja2withHTMLandCSS.ASTNode child : node.getChildren()) {
@@ -285,7 +305,7 @@ public class SemanticAnalyzer {
         }
     }
 
-    private void visitBlockNode(BlockNode block, Set<String> provided, Set<String> localVars) {
+    private void visitForBlockNode(ForBlockNode block, Set<String> provided, Set<String> localVars) {
         String collection = block.getCollection();
         String iterator = block.getIterator();
 
@@ -297,56 +317,38 @@ public class SemanticAnalyzer {
 
         Set<String> inner = new HashSet<>(localVars);
         if (iterator != null) inner.add(iterator);
-        for (ASTJinja2withHTMLandCSS.ASTNode child : block.getChildren()) {
+        for (ASTJinja2withHTMLandCSS.ASTNode child : block.getContent()) {
             visitTemplate(child, provided, inner);
         }
     }
 
-    private void checkTemplateExpression(ExpressionNode expression,
-                                         Set<String> provided,
-                                         Set<String> localVars) {
-        for (ASTJinja2withHTMLandCSS.ASTNode child : expression.getChildren()) {
-            if (child instanceof MemberAccessNode member) {
-                String chain = member.asString();
-                String root = chain.split("\\.")[0];
-                requireProvided(root, expression.getLineNumber(), provided, localVars,
-                        "used as {{ " + chain + " }}");
+    private void checkJinjaExpr(JinjaExprNode expr, int defaultLine,
+                                Set<String> provided, Set<String> localVars,
+                                String usage) {
+        if (expr == null) return;
+        int line = expr.getLineNumber() > 0 ? expr.getLineNumber() : defaultLine;
+
+        if (expr instanceof NameExprNode nameNode) {
+            requireProvided(nameNode.getName(), line, provided, localVars, usage);
+        } else if (expr instanceof MemberAccessNode member) {
+            requireProvided(member.getRoot(), line, provided, localVars, usage);
+        } else if (expr instanceof FilterExprNode filter) {
+            checkJinjaExpr(filter.getTarget(), line, provided, localVars, usage);
+            for (JinjaExprNode arg : filter.getArgs()) {
+                checkJinjaExpr(arg, line, provided, localVars, usage);
             }
-        }
-    }
-
-    private void checkTemplateStatement(JinjaStatementNode statement,
-                                        Set<String> provided,
-                                        Set<String> localVars) {
-        String content = statement.getContent().trim();
-        String[] parts = content.split("\\s+");
-
-        if (content.startsWith("if ") && parts.length > 1) {
-            requireProvided(rootOf(parts[1]), statement.getLineNumber(), provided, localVars,
-                    "tested by {% " + content + " %}");
-        } else if (content.startsWith("set ") && parts.length > 1) {
-            localVars.add(parts[1]);
-        }
-    }
-
-    /**
-     * Attribute values carry their {{ ... }} unparsed, because the STRING token
-     * swallows the braces. They reference context variables just like body text does,
-     * so src="/images/{{ p.image }}" has to be checked too.
-     */
-    private void checkAttributeInterpolation(AttributeNode attribute,
-                                             Set<String> provided,
-                                             Set<String> localVars) {
-        String value = attribute.getValue();
-        if (value == null) return;
-
-        Matcher matcher = INTERPOLATION.matcher(value);
-        while (matcher.find()) {
-            String inner = matcher.group(1);
-            String root = rootOf(inner);
-            if (root == null) continue;
-            requireProvided(root, attribute.getLineNumber(), provided, localVars,
-                    "interpolated in an attribute: {{" + inner + "}}");
+        } else if (expr instanceof BinaryExprNode binary) {
+            checkJinjaExpr(binary.getLeft(), line, provided, localVars, usage);
+            checkJinjaExpr(binary.getRight(), line, provided, localVars, usage);
+        } else if (expr instanceof UnaryExprNode unary) {
+            checkJinjaExpr(unary.getOperand(), line, provided, localVars, usage);
+        } else if (expr instanceof CallExprNode call) {
+            for (CallExprNode.Arg arg : call.getArgs()) {
+                checkJinjaExpr(arg.expr(), line, provided, localVars, usage);
+            }
+        } else if (expr instanceof SubscriptExprNode subscript) {
+            checkJinjaExpr(subscript.getTarget(), line, provided, localVars, usage);
+            checkJinjaExpr(subscript.getIndex(), line, provided, localVars, usage);
         }
     }
 

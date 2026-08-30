@@ -2,15 +2,12 @@ package codegen;
 
 import ASTJinja2withHTMLandCSS.ASTNode;
 import ASTJinja2withHTMLandCSS.ProgramNode;
-import ASTJinja2withHTMLandCSS.Jinja2.AttributeValueNode;
-import ASTJinja2withHTMLandCSS.Jinja2.BlockNode;
-import ASTJinja2withHTMLandCSS.Jinja2.ExpressionNode;
-import ASTJinja2withHTMLandCSS.Jinja2.JinjaStatementNode;
-import ASTJinja2withHTMLandCSS.Jinja2.MemberAccessNode;
+import ASTJinja2withHTMLandCSS.Jinja2.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,13 +16,10 @@ import java.util.regex.Pattern;
  * <p>
  * Everything static is copied straight out of the source using the character spans
  * the parser recorded, and only the dynamic nodes are replaced. That is what keeps
- * the whitespace intact — a node's own text cannot describe the space that sits
- * <em>between</em> it and its sibling, so {@code $ {{ p.price }}} would otherwise
- * come out as {@code $999}.
+ * the whitespace intact.
  */
 public class HtmlEmitter implements Emitter {
 
-    private static final Pattern INTERPOLATION = Pattern.compile("\\{\\{(.+?)}}");
     private static final Pattern URL_FOR = Pattern.compile("^url_for\\s*\\((.*)\\)$");
     private static final Pattern ARGUMENT =
             Pattern.compile("(?:(\\w+)\\s*=\\s*)?['\"]([^'\"]*)['\"]");
@@ -71,10 +65,12 @@ public class HtmlEmitter implements Emitter {
     private void emitNode(ASTNode node, Environment env) {
         if (node == null) return;
 
-        if (node instanceof ExpressionNode expression) { emitExpression(expression, env); return; }
-        if (node instanceof BlockNode block)           { emitForBlock(block, env); return; }
-        if (node instanceof JinjaStatementNode stmt)   { emitJinjaStatement(stmt, env); return; }
-        if (node instanceof AttributeValueNode value)  { emitAttributeValue(value, env); return; }
+        if (node instanceof JinjaExpressionNode expression) { emitExpression(expression, env); return; }
+        if (node instanceof ForBlockNode block)             { emitForBlock(block, env); return; }
+        if (node instanceof IfBlockNode ifBlock)           { emitIfBlock(ifBlock, env); return; }
+        if (node instanceof SetNode setNode)               { emitSetStatement(setNode, env); return; }
+        if (node instanceof NamedBlockNode namedBlock)     { emitNamedBlock(namedBlock, env); return; }
+        if (node instanceof AttributeNode attr)            { emitAttribute(attr, env); return; }
 
         List<ASTNode> children = node.getChildren();
         if (children.isEmpty()) {
@@ -86,7 +82,6 @@ public class HtmlEmitter implements Emitter {
 
     /**
      * Emits children in order, copying the untouched source that lies between them.
-     * That gap is where indentation and the space in {@code $ {{ price }}} live.
      */
     private void emitSequence(List<ASTNode> children, int from, int to, Environment env) {
         int cursor = from;
@@ -109,19 +104,14 @@ public class HtmlEmitter implements Emitter {
     //                       Dynamic nodes
     // ============================================================
 
-    /** {{ product.name }} */
-    private void emitExpression(ExpressionNode expression, Environment env) {
-        for (ASTNode child : expression.getChildren()) {
-            if (child instanceof MemberAccessNode member) {
-                Object value = resolveChain(member.asString(), env);
-                out.append(escapeText(Values.display(value)));
-                return;
-            }
-        }
+    /** {{ product.name }} or any Jinja expression */
+    private void emitExpression(JinjaExpressionNode expression, Environment env) {
+        Object value = evaluateExpr(expression.getExpr(), env);
+        out.append(escapeText(Values.display(value)));
     }
 
     /** {% for p in products %} ... {% endfor %} */
-    private void emitForBlock(BlockNode block, Environment env) {
+    private void emitForBlock(ForBlockNode block, Environment env) {
         int headerEnd = source.indexOf("%}", block.getStartIndex());
         int footerStart = source.lastIndexOf("{%", block.getStopIndex());
         if (headerEnd < 0 || footerStart < 0) {
@@ -130,7 +120,10 @@ public class HtmlEmitter implements Emitter {
         }
         headerEnd += 2;
 
-        Object collection = resolveChain(block.getCollection(), env);
+        Object collection = block.getCollectionExpr() != null
+                ? evaluateExpr(block.getCollectionExpr(), env)
+                : resolveChain(block.getCollection(), env);
+
         if (collection == null) {
             log.add("line " + block.getLineNumber() + ": '" + block.getCollection()
                     + "' is not in the context; the loop produced nothing");
@@ -142,7 +135,7 @@ public class HtmlEmitter implements Emitter {
             return;
         }
 
-        List<ASTNode> body = block.getChildren();
+        List<ASTNode> body = block.getContent();
         for (Object item : items) {
             Environment iteration = env.child();
             iteration.define(block.getIterator(), item);
@@ -150,101 +143,256 @@ public class HtmlEmitter implements Emitter {
         }
     }
 
-    /** {% set x = ... %} and any other directive; produces no output of its own. */
-    private void emitJinjaStatement(JinjaStatementNode statement, Environment env) {
-        String content = statement.getContent().trim();
-        String[] parts = content.split("\\s+");
-
-        if (content.startsWith("set ") && parts.length >= 4 && "=".equals(parts[2])) {
-            env.define(parts[1], stripQuotes(parts[3]));
+    /** {% if condition %} ... {% else %} ... {% endif %} */
+    private void emitIfBlock(IfBlockNode ifBlock, Environment env) {
+        int headerEnd = source.indexOf("%}", ifBlock.getStartIndex());
+        int footerStart = source.lastIndexOf("{%", ifBlock.getStopIndex());
+        if (headerEnd < 0 || footerStart < 0) {
+            log.add("line " + ifBlock.getLineNumber() + ": could not locate the bounds of the if block");
             return;
         }
-        log.add("line " + statement.getLineNumber() + ": directive {% " + content + " %} was skipped");
+        headerEnd += 2;
+
+        Object condVal = evaluateExpr(ifBlock.getCondition(), env);
+        boolean truthy = isTruthy(condVal);
+
+        int elseIndex = -1;
+        if (!ifBlock.getElseBody().isEmpty()) {
+            // Find {% else %} between headerEnd and footerStart
+            elseIndex = source.indexOf("{% else %}", headerEnd);
+            if (elseIndex < 0) {
+                elseIndex = source.indexOf("{%else%}", headerEnd);
+            }
+        }
+
+        if (truthy) {
+            int toIndex = (elseIndex > 0) ? elseIndex : footerStart;
+            emitSequence(ifBlock.getThenBody(), headerEnd, toIndex, env);
+        } else if (!ifBlock.getElseBody().isEmpty() && elseIndex > 0) {
+            int elseEnd = source.indexOf("%}", elseIndex) + 2;
+            emitSequence(ifBlock.getElseBody(), elseEnd, footerStart, env);
+        }
     }
 
-    /**
-     * Attribute values arrive with their {{ ... }} unparsed, because the STRING token
-     * swallows the braces. They are interpolated here and, for link attributes,
-     * rewritten to the generated file name.
-     */
-    private void emitAttributeValue(AttributeValueNode node, Environment env) {
-        String raw = node.getValue();
-        String resolved = interpolate(raw, env);
-
-        if (isLinkAttribute(node)) resolved = links.resolve(resolved);
-
-        out.append('"').append(escapeAttribute(resolved)).append('"');
+    /** {% set x = ... %} */
+    private void emitSetStatement(SetNode setNode, Environment env) {
+        Object val = evaluateExpr(setNode.getValue(), env);
+        env.define(setNode.getVarName(), val);
     }
 
-    private boolean isLinkAttribute(AttributeValueNode node) {
-        // The attribute name sits immediately before the '=' preceding this value.
-        int equals = source.lastIndexOf('=', node.getStartIndex());
-        if (equals <= 0) return false;
-        int end = equals;
-        while (end > 0 && Character.isWhitespace(source.charAt(end - 1))) end--;
-        int start = end;
-        while (start > 0 && (Character.isLetterOrDigit(source.charAt(start - 1))
-                || source.charAt(start - 1) == '-')) start--;
-        return LINK_ATTRIBUTES.contains(source.substring(start, end).toLowerCase());
+    /** {% block name %} ... {% endblock %} */
+    private void emitNamedBlock(NamedBlockNode namedBlock, Environment env) {
+        int headerEnd = source.indexOf("%}", namedBlock.getStartIndex());
+        int footerStart = source.lastIndexOf("{%", namedBlock.getStopIndex());
+        if (headerEnd >= 0 && footerStart >= 0) {
+            headerEnd += 2;
+            emitSequence(namedBlock.getBody(), headerEnd, footerStart, env);
+        } else {
+            for (ASTNode child : namedBlock.getBody()) {
+                emitNode(child, env);
+            }
+        }
+    }
+
+    /** Attribute emission */
+    private void emitAttribute(AttributeNode attr, Environment env) {
+        String name = attr.getName();
+        if (attr.getValueParts().isEmpty()) {
+            out.append(name);
+            return;
+        }
+
+        StringBuilder valBuilder = new StringBuilder();
+        for (ASTNode part : attr.getValueParts()) {
+            if (part instanceof AttrTextNode textNode) {
+                valBuilder.append(textNode.getText());
+            } else if (part instanceof JinjaExpressionNode exprNode) {
+                Object val = evaluateExpr(exprNode.getExpr(), env);
+                valBuilder.append(Values.display(val));
+            } else if (part != null) {
+                valBuilder.append(part.nodeValue());
+            }
+        }
+
+        String resolved = valBuilder.toString();
+        if (LINK_ATTRIBUTES.contains(name.toLowerCase())) {
+            resolved = links.resolve(resolved);
+        }
+
+        out.append(name).append("=\"").append(escapeAttribute(resolved)).append("\"");
     }
 
     // ============================================================
-    //                       Interpolation
+    //                   Expression Evaluation
     // ============================================================
 
-    /** Replaces every {{ ... }} inside a plain string. */
-    private String interpolate(String text, Environment env) {
-        if (text == null || !text.contains("{{")) return text;
+    public Object evaluateExpr(JinjaExprNode expr, Environment env) {
+        if (expr == null) return null;
 
-        Matcher matcher = INTERPOLATION.matcher(text);
-        StringBuilder result = new StringBuilder();
-        while (matcher.find()) {
-            Object value = evaluateInline(matcher.group(1).trim(), env);
-            matcher.appendReplacement(result, Matcher.quoteReplacement(Values.display(value)));
+        if (expr instanceof NameExprNode nameNode) {
+            String name = nameNode.getName();
+            return env.get(name);
         }
-        matcher.appendTail(result);
-        return result.toString();
+
+        if (expr instanceof LiteralNode lit) {
+            return lit.getValue();
+        }
+
+        if (expr instanceof MemberAccessNode mem) {
+            return resolveChain(mem.asString(), env);
+        }
+
+        if (expr instanceof CallExprNode call) {
+            return evaluateCallExpr(call, env);
+        }
+
+        if (expr instanceof FilterExprNode filter) {
+            Object target = evaluateExpr(filter.getTarget(), env);
+            return applyFilter(target, filter.getFilterName(), filter.getArgs(), env);
+        }
+
+        if (expr instanceof BinaryExprNode bin) {
+            Object left = evaluateExpr(bin.getLeft(), env);
+            Object right = evaluateExpr(bin.getRight(), env);
+            return evaluateBinary(left, bin.getOp(), right);
+        }
+
+        if (expr instanceof UnaryExprNode un) {
+            Object operand = evaluateExpr(un.getOperand(), env);
+            if ("not".equalsIgnoreCase(un.getOp())) {
+                return !isTruthy(operand);
+            }
+            return operand;
+        }
+
+        if (expr instanceof SubscriptExprNode sub) {
+            Object target = evaluateExpr(sub.getTarget(), env);
+            Object index = evaluateExpr(sub.getIndex(), env);
+            if (target instanceof Map<?, ?> map && index != null) {
+                return map.get(index.toString());
+            }
+            if (target instanceof List<?> list && index instanceof Number num) {
+                int idx = num.intValue();
+                if (idx >= 0 && idx < list.size()) return list.get(idx);
+            }
+            return null;
+        }
+
+        return null;
     }
 
-    /**
-     * Evaluates the small expression language that appears inside {{ }}:
-     * a member chain, or a url_for() call. Anything else is logged and left empty.
-     */
-    private Object evaluateInline(String expression, Environment env) {
-        Matcher urlFor = URL_FOR.matcher(expression);
-        if (urlFor.matches()) return evaluateUrlFor(urlFor.group(1));
-
-        Object value = resolveChain(expression, env);
-        if (value == null && !env.has(rootOf(expression))) {
-            log.add("expression {{ " + expression + " }} could not be resolved");
+    private Object evaluateCallExpr(CallExprNode call, Environment env) {
+        String callee = call.getCallee();
+        if ("url_for".equals(callee)) {
+            String endpoint = "";
+            String filename = null;
+            for (CallExprNode.Arg arg : call.getArgs()) {
+                if ("filename".equals(arg.name())) {
+                    Object val = evaluateExpr(arg.expr(), env);
+                    filename = val != null ? val.toString() : null;
+                } else if (arg.name() == null && endpoint.isEmpty()) {
+                    Object val = evaluateExpr(arg.expr(), env);
+                    endpoint = val != null ? val.toString() : "";
+                }
+            }
+            if ("static".equals(endpoint)) {
+                return (filename != null) ? filename : "";
+            }
+            String page = links.resolveEndpoint(endpoint);
+            if (page != null) return page;
+            log.add("url_for('" + endpoint + "') has no generated page; left as a path");
+            return "/" + endpoint;
         }
-        return value;
+        log.add("unknown function call: " + callee);
+        return null;
     }
 
-    /**
-     * url_for('static', filename='style.css') gives style.css, because the generated
-     * pages sit next to their assets; url_for('home') gives that route's page.
-     */
-    private String evaluateUrlFor(String argumentText) {
-        List<String> positional = new ArrayList<>();
-        String filename = null;
-
-        Matcher matcher = ARGUMENT.matcher(argumentText);
-        while (matcher.find()) {
-            String keyword = matcher.group(1);
-            String value = matcher.group(2);
-            if (keyword == null) positional.add(value);
-            else if ("filename".equals(keyword)) filename = value;
+    private Object applyFilter(Object target, String filterName, List<JinjaExprNode> args, Environment env) {
+        if (target == null) return "";
+        String s = target.toString();
+        switch (filterName.toLowerCase()) {
+            case "upper": return s.toUpperCase();
+            case "lower": return s.toLowerCase();
+            case "length":
+                if (target instanceof List<?> l) return l.size();
+                if (target instanceof Map<?, ?> m) return m.size();
+                return s.length();
+            case "capitalize":
+                return s.isEmpty() ? s : Character.toUpperCase(s.charAt(0)) + s.substring(1);
+            case "trim": return s.trim();
+            default:
+                log.add("unknown filter: " + filterName);
+                return target;
         }
+    }
 
-        String endpoint = positional.isEmpty() ? "" : positional.get(0);
-        if ("static".equals(endpoint)) return (filename != null) ? filename : "";
+    private Object evaluateBinary(Object left, String op, Object right) {
+        if (op == null) return null;
+        switch (op) {
+            case "+":
+                if (left instanceof Number n1 && right instanceof Number n2) {
+                    if (left instanceof Double || right instanceof Double)
+                        return n1.doubleValue() + n2.doubleValue();
+                    return n1.longValue() + n2.longValue();
+                }
+                return String.valueOf(left != null ? left : "") + (right != null ? right : "");
+            case "-":
+                if (left instanceof Number n1 && right instanceof Number n2)
+                    return n1.doubleValue() - n2.doubleValue();
+                return 0;
+            case "*":
+                if (left instanceof Number n1 && right instanceof Number n2)
+                    return n1.doubleValue() * n2.doubleValue();
+                return 0;
+            case "/":
+                if (left instanceof Number n1 && right instanceof Number n2 && n2.doubleValue() != 0)
+                    return n1.doubleValue() / n2.doubleValue();
+                return 0;
+            case "==": return Objects.equals(left, right) || String.valueOf(left).equals(String.valueOf(right));
+            case "!=": return !Objects.equals(left, right) && !String.valueOf(left).equals(String.valueOf(right));
+            case "<":
+                if (left instanceof Number n1 && right instanceof Number n2)
+                    return n1.doubleValue() < n2.doubleValue();
+                return false;
+            case ">":
+                if (left instanceof Number n1 && right instanceof Number n2)
+                    return n1.doubleValue() > n2.doubleValue();
+                return false;
+            case "<=":
+                if (left instanceof Number n1 && right instanceof Number n2)
+                    return n1.doubleValue() <= n2.doubleValue();
+                return false;
+            case ">=":
+                if (left instanceof Number n1 && right instanceof Number n2)
+                    return n1.doubleValue() >= n2.doubleValue();
+                return false;
+            case "and": return isTruthy(left) ? right : left;
+            case "or": return isTruthy(left) ? left : right;
+            case "in":
+                if (right instanceof Iterable<?> iter) {
+                    for (Object o : iter) if (Objects.equals(left, o)) return true;
+                    return false;
+                }
+                if (right instanceof Map<?, ?> m) return m.containsKey(String.valueOf(left));
+                if (right instanceof String str) return str.contains(String.valueOf(left));
+                return false;
+            case "is":
+                if ("none".equalsIgnoreCase(String.valueOf(right))) return left == null;
+                if ("defined".equalsIgnoreCase(String.valueOf(right))) return left != null;
+                return Objects.equals(left, right);
+            default:
+                return null;
+        }
+    }
 
-        String page = links.resolveEndpoint(endpoint);
-        if (page != null) return page;
-
-        log.add("url_for('" + endpoint + "') has no generated page; left as a path");
-        return "/" + endpoint;
+    private boolean isTruthy(Object val) {
+        if (val == null) return false;
+        if (val instanceof Boolean b) return b;
+        if (val instanceof Number n) return n.doubleValue() != 0.0;
+        if (val instanceof String s) return !s.isEmpty();
+        if (val instanceof List<?> l) return !l.isEmpty();
+        if (val instanceof Map<?, ?> m) return !m.isEmpty();
+        return true;
     }
 
     /** Walks {@code p.name} through the context. */
@@ -264,19 +412,6 @@ public class HtmlEmitter implements Emitter {
             }
         }
         return current;
-    }
-
-    private String rootOf(String chain) {
-        return (chain == null) ? "" : chain.trim().split("\\.")[0];
-    }
-
-    private String stripQuotes(String text) {
-        if (text.length() >= 2
-                && (text.charAt(0) == '"' || text.charAt(0) == '\'')
-                && text.charAt(0) == text.charAt(text.length() - 1)) {
-            return text.substring(1, text.length() - 1);
-        }
-        return text;
     }
 
     // ============================================================

@@ -1,12 +1,10 @@
 package ASTJinja2withHTMLandCSS.CSS.Selectors;
 
 import ASTJinja2withHTMLandCSS.ASTNode;
-
 import java.util.ArrayList;
 import java.util.List;
 
 public class SelectorListNode extends ASTNode {
-
     private final List<SelectorChainNode> selectors = new ArrayList<>();
 
     public SelectorListNode(int line) {
@@ -14,8 +12,15 @@ public class SelectorListNode extends ASTNode {
     }
 
     public void addSelector(SelectorChainNode s) {
-        selectors.add(s);
+        if (s != null) {
+            selectors.add(s);
+        }
     }
+
+    public List<SelectorChainNode> getSelectors() {
+        return selectors;
+    }
+
     @Override
     public List<ASTNode> getChildren() {
         return new ArrayList<>(selectors);

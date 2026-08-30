@@ -155,7 +155,7 @@ public class AstJsonWriter {
         }
         json.optionalField("value", node.nodeValue(), false);
 
-        if (node instanceof ASTJinja2withHTMLandCSS.Jinja2.BlockNode block) {
+        if (node instanceof ASTJinja2withHTMLandCSS.Jinja2.ForBlockNode block) {
             json.field("iterator", block.getIterator(), false);
             json.field("collection", block.getCollection(), false);
         } else if (node instanceof ASTJinja2withHTMLandCSS.Jinja2.AttributeNode attribute) {

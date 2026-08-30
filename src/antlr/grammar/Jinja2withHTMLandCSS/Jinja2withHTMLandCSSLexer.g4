@@ -1,116 +1,196 @@
 lexer grammar Jinja2withHTMLandCSSLexer;
 
-WS                : [ \n\t\r]+ -> channel(HIDDEN);
-JINJA_COMMENT     : '{#' .*? '#}' -> skip ;
+// ================================================================
+//                     DEFAULT_MODE (HTML Body)
+// ================================================================
 
-DOCTYPE_TAG : 'DOCTYPE';
-HTML_TAG    : 'html';
-HEAD_TAG    : 'head';
-BODY_TAG    : 'body';
-META_TAG    : 'meta';
-TITLE_TAG   : 'title';
-LINK_TAG    : 'link';
-DIV_TAG       : 'div';
-A_TAG         : 'a';
-P_TAG         : 'p';
-H1_TAG        : 'h1';
-H2_TAG        : 'h2';
-H3_TAG        : 'h3';
-H4_TAG        : 'h4';
-H5_TAG        : 'h5';
-H6_TAG        : 'h6';
-IMG_TAG       : 'img';
-FORM_TAG      : 'form';
-INPUT_TAG     : 'input';
-LABEL_TAG     : 'label';
-BUTTON_TAG    : 'button';
-TEXTAREA_TAG  : 'textarea';
-SPAN_TAG      : 'span';
-UL_TAG        : 'ul';
-LI_TAG        : 'li';
+HTML_COMMENT         : '<!--' .*? '-->' -> skip ;
+JINJA_COMMENT        : '{#' .*? '#}' -> skip ;
 
+JINJA_EXPR_OPEN      : '{{' -> pushMode(JINJA_EXPR) ;
+JINJA_STMT_OPEN      : '{%' -> pushMode(JINJA_STMT) ;
 
-CHARSET_ATT     : 'charset';
-STYLE_ATT       : 'style';
-ALT_ATT         : 'alt';
-HREF_ATT        : 'href';
-SRC_ATT         : 'src';
-REL_ATT         : 'rel';
-CLASS_ATT       : 'class';
-METHOD_ATT      : 'method';
-TYPE_ATT        : 'type';
-NAME_ATT        : 'name';
-STEP_ATT        : 'step';
-REQUIRED_ATT    : 'required';
-ACTION_ATT      : 'action';
-VALUE_ATT       : 'value';
+OPEN_TAG_SLASH       : '</' -> pushMode(TAG) ;
+OPEN_TAG             : '<'  -> pushMode(TAG) ;
 
+LBRACE               : '{' ;
+TEXT                 : ~[<{]+ ;
 
+// ================================================================
+//                     TAG Mode (<tag attr="val">)
+// ================================================================
 
-FONT_FAMILY    : 'font-family';
-BACKGROUND     : 'background';
-BACKGROUND_COLOR : 'background-color';
-COLOR_PROP     : 'color';
-PADDING        : 'padding';
-PADDING_TOP    : 'padding-top';
-PADDING_BOTTOM : 'padding-bottom';
-MARGIN         : 'margin';
-MARGIN_TOP     : 'margin-top';
-MARGIN_BOTTOM  : 'margin-bottom';
-WIDTH          : 'width';
-HEIGHT         : 'height';
-DISPLAY        : 'display';
-GAP            : 'gap';
-FLEX_WRAP      : 'flex-wrap';
-JUSTIFY_CONTENT: 'justify-content';
-TEXT_ALIGN     : 'text-align';
-FONT_SIZE      : 'font-size';
-FONT_WEIGHT    : 'font-weight';
-BORDER         : 'border';
-BORDER_RADIUS  : 'border-radius';
-BOX_SHADOW     : 'box-shadow';
-TEXT_DECORATION: 'text-decoration';
-CURSOR         : 'cursor';
-TRANSFORM      : 'transform';
-FLEX_DIRECTION : 'flex-direction';
+mode TAG;
 
+TAG_WS               : [ \t\r\n]+ -> skip ;
+TAG_EQUALS           : '=' ;
+TAG_BANG             : '!' ;
+SLASH_CLOSE          : '/>' -> popMode ;
+CLOSE_TAG            : '>'  -> popMode ;
 
-PSEUDO_HOVER : 'hover';
+TAG_DQ_OPEN          : '"'  -> pushMode(ATTR_VALUE_DQ) ;
+TAG_SQ_OPEN          : '\'' -> pushMode(ATTR_VALUE_SQ) ;
 
-LCURLY           : '{';
-RCURLY           : '}';
-BLOCK_START      : '{%';
-BLOCK_END        : '%}';
-ASSIGN           : '=';
-NOT              : '!';
-OPEN_TAG         : '<';
-OPEN_TAG_SLASH   : '</';
-CLOSE_TAG        : '>';
-SELF_CLOSD       :'/>';
-COLON            : ':';
-SEMICOLON        : ';';
-COMMA            : ',';
-LPAREN           : '(';
-RPAREN           : ')';
-DOT              : '.';
-HASH             : '#';
-PLUS             : '+';
-MINUS            : '-';
-STAR             : '*';
-DIVISION         : '/';
-FOR              : 'for';
-END_FOR          : 'endfor';
-IN               : 'in';
-STRING
-    : '"' (~["\r\n])* '"'
-    | '\'' (~["\r\n])* '\''
-    ;
-NUMBER           : ('-' | '+')? [0-9]+ ('.' [0-9]+)? ;
-BOOL             : 'true' | 'false' ;
-CSS_UNIT : 'px' | 'em' | 'rem'| '%' ;
+VOID_TAG_NAME        : 'area' | 'base' | 'br' | 'col' | 'embed' | 'hr'
+                     | 'img' | 'input' | 'link' | 'meta' | 'param'
+                     | 'source' | 'track' | 'wbr' ;
 
-fragment HEX : [0-9a-fA-F];
+TAG_NAME             : [a-zA-Z_][a-zA-Z0-9_:-]* ;
 
-CSS_COLOR : '#' HEX HEX HEX (HEX HEX HEX)?;
+// ================================================================
+//                     ATTR_VALUE_DQ Mode ("value")
+// ================================================================
 
-IDDEFINER       : [a-zA-Z_$][-a-zA-Z0-9_$]*;
+mode ATTR_VALUE_DQ;
+
+ATTR_JINJA_EXPR_OPEN : '{{' -> pushMode(JINJA_EXPR) ;
+ATTR_JINJA_STMT_OPEN : '{%' -> pushMode(JINJA_STMT) ;
+DQ_CLOSE             : '"'  -> popMode ;
+ATTR_LBRACE          : '{' ;
+ATTR_TEXT            : ~["{]+ ;
+
+// ================================================================
+//                     ATTR_VALUE_SQ Mode ('value')
+// ================================================================
+
+mode ATTR_VALUE_SQ;
+
+SQ_JINJA_EXPR_OPEN   : '{{' -> pushMode(JINJA_EXPR) ;
+SQ_JINJA_STMT_OPEN   : '{%' -> pushMode(JINJA_STMT) ;
+SQ_CLOSE             : '\'' -> popMode ;
+SQ_ATTR_LBRACE       : '{' ;
+SQ_ATTR_TEXT         : ~['{]+ ;
+
+// ================================================================
+//                     JINJA_EXPR Mode ({{ expr }})
+// ================================================================
+
+mode JINJA_EXPR;
+
+JINJA_EXPR_CLOSE     : '}}' -> popMode ;
+JINJA_WS             : [ \t\r\n]+ -> skip ;
+
+JINJA_DOT            : '.' ;
+JINJA_PIPE           : '|' ;
+JINJA_COMMA          : ',' ;
+JINJA_COLON          : ':' ;
+JINJA_LPAREN         : '(' ;
+JINJA_RPAREN         : ')' ;
+JINJA_LBRACKET       : '[' ;
+JINJA_RBRACKET       : ']' ;
+
+JINJA_EQ             : '==' ;
+JINJA_NE             : '!=' ;
+JINJA_LE             : '<=' ;
+JINJA_GE             : '>=' ;
+JINJA_LT             : '<' ;
+JINJA_GT             : '>' ;
+JINJA_ASSIGN         : '=' ;
+
+JINJA_PLUS           : '+' ;
+JINJA_MINUS          : '-' ;
+JINJA_STAR           : '*' ;
+JINJA_SLASH          : '/' ;
+JINJA_PERCENT        : '%' ;
+
+JINJA_TRUE           : 'true' | 'True' ;
+JINJA_FALSE          : 'false' | 'False' ;
+JINJA_NONE           : 'none' | 'None' ;
+JINJA_NOT            : 'not' ;
+JINJA_AND            : 'and' ;
+JINJA_OR             : 'or' ;
+JINJA_IS             : 'is' ;
+JINJA_IN             : 'in' ;
+
+JINJA_STRING         : '"' (~["\r\n\\] | '\\' .)* '"'
+                     | '\'' (~['\r\n\\] | '\\' .)* '\'' ;
+JINJA_NUMBER         : [0-9]+ ('.' [0-9]+)? ;
+JINJA_ID             : [a-zA-Z_][a-zA-Z0-9_]* ;
+
+// ================================================================
+//                     JINJA_STMT Mode ({% stmt %})
+// ================================================================
+
+mode JINJA_STMT;
+
+JINJA_STMT_CLOSE     : '%}' -> popMode ;
+STMT_WS              : [ \t\r\n]+ -> skip ;
+
+KW_FOR               : 'for' ;
+KW_ENDFOR            : 'endfor' ;
+KW_IF                : 'if' ;
+KW_ELSE              : 'else' ;
+KW_ENDIF             : 'endif' ;
+KW_SET               : 'set' ;
+KW_BLOCK             : 'block' ;
+KW_ENDBLOCK          : 'endblock' ;
+KW_IN                : 'in' ;
+KW_NOT               : 'not' ;
+KW_AND               : 'and' ;
+KW_OR                : 'or' ;
+KW_IS                : 'is' ;
+
+STMT_TRUE            : 'true' | 'True' ;
+STMT_FALSE           : 'false' | 'False' ;
+STMT_NONE            : 'none' | 'None' ;
+
+STMT_DOT             : '.' ;
+STMT_PIPE            : '|' ;
+STMT_COMMA           : ',' ;
+STMT_COLON           : ':' ;
+STMT_LPAREN          : '(' ;
+STMT_RPAREN          : ')' ;
+STMT_LBRACKET        : '[' ;
+STMT_RBRACKET        : ']' ;
+
+STMT_EQ              : '==' ;
+STMT_NE              : '!=' ;
+STMT_LE              : '<=' ;
+STMT_GE              : '>=' ;
+STMT_LT              : '<' ;
+STMT_GT              : '>' ;
+STMT_ASSIGN          : '=' ;
+
+STMT_PLUS            : '+' ;
+STMT_MINUS           : '-' ;
+STMT_STAR            : '*' ;
+STMT_SLASH           : '/' ;
+STMT_PERCENT         : '%' ;
+
+STMT_STRING          : '"' (~["\r\n\\] | '\\' .)* '"'
+                     | '\'' (~['\r\n\\] | '\\' .)* '\'' ;
+STMT_NUMBER          : [0-9]+ ('.' [0-9]+)? ;
+STMT_ID              : [a-zA-Z_][a-zA-Z0-9_]* ;
+
+// ================================================================
+//                     CSS Mode (.css external files)
+// ================================================================
+
+mode CSS;
+
+CSS_COMMENT          : '/*' .*? '*/' -> skip ;
+CSS_WS               : [ \t\r\n]+ -> skip ;
+
+CSS_IMPORTANT        : '!' [ \t\r\n]* 'important' ;
+
+CSS_LCURLY           : '{' ;
+CSS_RCURLY           : '}' ;
+CSS_COLON            : ':' ;
+CSS_SEMICOLON        : ';' ;
+CSS_COMMA            : ',' ;
+CSS_DOT              : '.' ;
+CSS_HASH             : '#' ;
+CSS_LPAREN           : '(' ;
+CSS_RPAREN           : ')' ;
+CSS_STAR             : '*' ;
+CSS_GT               : '>' ;
+CSS_PLUS             : '+' ;
+CSS_TILDE            : '~' ;
+CSS_PERCENT          : '%' ;
+CSS_SLASH            : '/' ;
+
+CSS_HEX_COLOR        : '#' [0-9a-fA-F]+ ;
+CSS_STRING           : '"' (~["\r\n\\] | '\\' .)* '"'
+                     | '\'' (~['\r\n\\] | '\\' .)* '\'' ;
+CSS_NUMBER           : ('-' | '+')? [0-9]+ ('.' [0-9]+)? ;
+CSS_IDENT            : ('-' | '--')? [a-zA-Z_][a-zA-Z0-9_-]* ;
