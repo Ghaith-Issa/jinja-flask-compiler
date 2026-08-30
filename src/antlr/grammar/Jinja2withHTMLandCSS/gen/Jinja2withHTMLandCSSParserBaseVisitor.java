@@ -1,4 +1,4 @@
-// Generated from D:/compiler/jinja-flask-compiler/src/antlr/grammar/Jinja2withHTMLandCSS/Jinja2withHTMLandCSSParser.g4 by ANTLR 4.13.2
+// Generated from src/antlr/grammar/Jinja2withHTMLandCSS/Jinja2withHTMLandCSSParser.g4 by ANTLR 4.13.2
 package antlr.grammar.Jinja2withHTMLandCSS.gen;
 import org.antlr.v4.runtime.tree.AbstractParseTreeVisitor;
 
@@ -158,6 +158,13 @@ public class Jinja2withHTMLandCSSParserBaseVisitor<T> extends AbstractParseTreeV
 	 * <p>The default implementation returns the result of calling
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
+	@Override public T visitExprOpen(Jinja2withHTMLandCSSParser.ExprOpenContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
 	@Override public T visitJinjaExpression(Jinja2withHTMLandCSSParser.JinjaExpressionContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
@@ -299,6 +306,13 @@ public class Jinja2withHTMLandCSSParserBaseVisitor<T> extends AbstractParseTreeV
 	 * {@link #visitChildren} on {@code ctx}.</p>
 	 */
 	@Override public T visitJinjaArg(Jinja2withHTMLandCSSParser.JinjaArgContext ctx) { return visitChildren(ctx); }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation returns the result of calling
+	 * {@link #visitChildren} on {@code ctx}.</p>
+	 */
+	@Override public T visitStmtOpen(Jinja2withHTMLandCSSParser.StmtOpenContext ctx) { return visitChildren(ctx); }
 	/**
 	 * {@inheritDoc}
 	 *

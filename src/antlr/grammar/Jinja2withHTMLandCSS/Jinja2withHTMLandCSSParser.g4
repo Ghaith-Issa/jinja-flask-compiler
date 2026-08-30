@@ -60,10 +60,14 @@ sqAttrValuePart
     ;
 
 // =================== Jinja Expressions {{ ... }} ===================
+exprOpen
+    : JINJA_EXPR_OPEN
+    | ATTR_JINJA_EXPR_OPEN
+    | SQ_JINJA_EXPR_OPEN
+    ;
+
 jinjaExpression
-    : JINJA_EXPR_OPEN jinjaExpr JINJA_EXPR_CLOSE
-    | ATTR_JINJA_EXPR_OPEN jinjaExpr JINJA_EXPR_CLOSE
-    | SQ_JINJA_EXPR_OPEN jinjaExpr JINJA_EXPR_CLOSE
+    : exprOpen jinjaExpr JINJA_EXPR_CLOSE
     ;
 
 jinjaExpr
@@ -96,6 +100,12 @@ jinjaArg
     ;
 
 // =================== Jinja Block Constructs ===================
+stmtOpen
+    : JINJA_STMT_OPEN
+    | ATTR_JINJA_STMT_OPEN
+    | SQ_JINJA_STMT_OPEN
+    ;
+
 jinjaBlock
     : forBlock
     | ifBlock
@@ -107,11 +117,11 @@ forBlock
     ;
 
 jinjaForOpen
-    : JINJA_STMT_OPEN KW_FOR STMT_ID KW_IN stmtExpr JINJA_STMT_CLOSE
+    : stmtOpen KW_FOR STMT_ID KW_IN stmtExpr JINJA_STMT_CLOSE
     ;
 
 jinjaForClose
-    : JINJA_STMT_OPEN KW_ENDFOR JINJA_STMT_CLOSE
+    : stmtOpen KW_ENDFOR JINJA_STMT_CLOSE
     ;
 
 ifBlock
@@ -119,15 +129,15 @@ ifBlock
     ;
 
 jinjaIfOpen
-    : JINJA_STMT_OPEN KW_IF stmtExpr JINJA_STMT_CLOSE
+    : stmtOpen KW_IF stmtExpr JINJA_STMT_CLOSE
     ;
 
 jinjaElse
-    : JINJA_STMT_OPEN KW_ELSE JINJA_STMT_CLOSE
+    : stmtOpen KW_ELSE JINJA_STMT_CLOSE
     ;
 
 jinjaEndIf
-    : JINJA_STMT_OPEN KW_ENDIF JINJA_STMT_CLOSE
+    : stmtOpen KW_ENDIF JINJA_STMT_CLOSE
     ;
 
 namedBlock
@@ -135,15 +145,15 @@ namedBlock
     ;
 
 jinjaBlockOpen
-    : JINJA_STMT_OPEN KW_BLOCK STMT_ID JINJA_STMT_CLOSE
+    : stmtOpen KW_BLOCK STMT_ID JINJA_STMT_CLOSE
     ;
 
 jinjaBlockClose
-    : JINJA_STMT_OPEN KW_ENDBLOCK JINJA_STMT_CLOSE
+    : stmtOpen KW_ENDBLOCK JINJA_STMT_CLOSE
     ;
 
 jinjaSetStmt
-    : JINJA_STMT_OPEN KW_SET STMT_ID STMT_ASSIGN stmtExpr JINJA_STMT_CLOSE
+    : stmtOpen KW_SET STMT_ID STMT_ASSIGN stmtExpr JINJA_STMT_CLOSE
     ;
 
 stmtExpr

@@ -1,4 +1,4 @@
-// Generated from D:/compiler/jinja-flask-compiler/src/antlr/grammar/Jinja2withHTMLandCSS/Jinja2withHTMLandCSSParser.g4 by ANTLR 4.13.2
+// Generated from src/antlr/grammar/Jinja2withHTMLandCSS/Jinja2withHTMLandCSSParser.g4 by ANTLR 4.13.2
 package antlr.grammar.Jinja2withHTMLandCSS.gen;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
@@ -147,6 +147,12 @@ public interface Jinja2withHTMLandCSSParserVisitor<T> extends ParseTreeVisitor<T
 	 */
 	T visitSqAttrJinjaExpr(Jinja2withHTMLandCSSParser.SqAttrJinjaExprContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link Jinja2withHTMLandCSSParser#exprOpen}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitExprOpen(Jinja2withHTMLandCSSParser.ExprOpenContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link Jinja2withHTMLandCSSParser#jinjaExpression}.
 	 * @param ctx the parse tree
 	 * @return the visitor result
@@ -290,6 +296,12 @@ public interface Jinja2withHTMLandCSSParserVisitor<T> extends ParseTreeVisitor<T
 	 * @return the visitor result
 	 */
 	T visitJinjaArg(Jinja2withHTMLandCSSParser.JinjaArgContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link Jinja2withHTMLandCSSParser#stmtOpen}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitStmtOpen(Jinja2withHTMLandCSSParser.StmtOpenContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link Jinja2withHTMLandCSSParser#jinjaBlock}.
 	 * @param ctx the parse tree
