@@ -592,7 +592,7 @@ public class BaseVisitor extends Jinja2withHTMLandCSSParserBaseVisitor<ASTNode> 
 
     @Override
     public ASTNode visitTextNode(Jinja2withHTMLandCSSParser.TextNodeContext ctx) {
-        String text = originalText(ctx);
+        String text = ctx.getText();
         if (text == null || text.trim().isEmpty()) {
             return null;
         }

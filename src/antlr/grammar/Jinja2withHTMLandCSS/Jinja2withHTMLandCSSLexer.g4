@@ -4,8 +4,8 @@ lexer grammar Jinja2withHTMLandCSSLexer;
 //                     DEFAULT_MODE (HTML Body)
 // ================================================================
 
-HTML_COMMENT         : '<!--' .*? '-->' -> skip ;
-JINJA_COMMENT        : '{#' .*? '#}' -> skip ;
+HTML_COMMENT         : '<!--' ( . | '\r' | '\n' )*? '-->' -> skip ;
+JINJA_COMMENT        : '{#' ( . | '\r' | '\n' )*? '#}' -> skip ;
 
 JINJA_EXPR_OPEN      : '{{' -> pushMode(JINJA_EXPR) ;
 JINJA_STMT_OPEN      : '{%' -> pushMode(JINJA_STMT) ;
@@ -168,7 +168,7 @@ STMT_ID              : [a-zA-Z_][a-zA-Z0-9_]* ;
 
 mode CSS;
 
-CSS_COMMENT          : '/*' .*? '*/' -> skip ;
+CSS_COMMENT          : '/*' ( . | '\r' | '\n' )*? '*/' -> skip ;
 CSS_WS               : [ \t\r\n]+ -> skip ;
 
 CSS_IMPORTANT        : '!' [ \t\r\n]* 'important' ;
